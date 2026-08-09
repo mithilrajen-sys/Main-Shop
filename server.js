@@ -56,7 +56,15 @@ function normalizePhone(value) {
 
 async function initDatabase() {
   const SQL = await initSqlJs();
-  const fileBuffer = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+  let fileBuffer = null;
+  try {
+    if (fs.existsSync(dbPath)) {
+      fileBuffer = fs.readFileSync(dbPath);
+    }
+  } catch (e) {
+    console.log('No existing DB found or unreadable, creating new.');
+  }
+
   db = new SQL.Database(fileBuffer || undefined);
 
   db.run(`
@@ -90,7 +98,7 @@ async function initDatabase() {
   try {
     db.run('ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT "Unpaid"');
   } catch (error) {
-    // Ignore if the column already exists.
+    // Ignore if column exists
   }
 
   const productCount = Number(fetchOne('SELECT COUNT(*) AS count FROM products')?.count || 0);
@@ -118,40 +126,27 @@ async function initDatabase() {
 
 function persistDatabase() {
   if (!db) return;
-  const binary = db.export();
-  fs.writeFileSync(dbPath, Buffer.from(binary));
+  try {
+    const binary = db.export();
+    fs.writeFileSync(dbPath, Buffer.from(binary));
+  } catch (e) {
+    console.error('Failed to persist database:', e);
+  }
 }
 
 function sendEmail(to, subject, text) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log('Email skipped: SMTP not configured');
-    return Promise.resolve();
-  }
-
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return Promise.resolve();
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT || 587),
     secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
   });
-
-  return transporter.sendMail({
-    from: process.env.SMTP_USER,
-    to,
-    subject,
-    text
-  });
+  return transporter.sendMail({ from: process.env.SMTP_USER, to, subject, text });
 }
 
 function sendWhatsApp(message) {
-  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
-    console.log('WhatsApp skipped: Twilio not configured');
-    return Promise.resolve();
-  }
-
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) return Promise.resolve();
   const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
   return client.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886',
@@ -159,14 +154,6 @@ function sendWhatsApp(message) {
     body: message
   });
 }
-
-app.get('/styles.css', (req, res) => {
-  res.sendFile(path.join(__dirname, 'styles.css'));
-});
-
-app.get('/app.js', (req, res) => {
-  res.sendFile(path.join(__dirname, 'app.js'));
-});
 
 app.get('/api/products', (req, res) => {
   try {
@@ -180,14 +167,11 @@ app.get('/api/products', (req, res) => {
 app.get('/api/orders', (req, res) => {
   try {
     const phoneFilter = normalizePhone(req.query.phone || '');
-
     const sql = phoneFilter
       ? 'SELECT * FROM orders WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "(", ""), ")", ""), "+", "") = ? ORDER BY created_at DESC'
       : 'SELECT * FROM orders ORDER BY created_at DESC';
-
     const params = phoneFilter ? [phoneFilter] : [];
     const rows = fetchAll(sql, params);
-
     res.json(rows.map(order => ({ ...order, items: JSON.parse(order.items || '[]') })));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -196,16 +180,13 @@ app.get('/api/orders', (req, res) => {
 
 app.post('/api/products', (req, res) => {
   const { id, name, category, description, price, image_url } = req.body;
-
   if (!id || !name || !category || !description || !price) {
     res.status(400).json({ error: 'Missing required product fields.' });
     return;
   }
-
   try {
     db.run('INSERT INTO products (id, name, category, description, price, image_url) VALUES (?, ?, ?, ?, ?, ?)', [id, name, category, description, Number(price), image_url || '']);
     persistDatabase();
-
     res.json({ success: true, product: { id, name, category, description, price: Number(price), image_url: image_url || '' } });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -214,7 +195,6 @@ app.post('/api/products', (req, res) => {
 
 app.delete('/api/products/:id', (req, res) => {
   const { id } = req.params;
-
   try {
     db.run('DELETE FROM products WHERE id = ?', [id]);
     persistDatabase();
@@ -226,7 +206,6 @@ app.delete('/api/products/:id', (req, res) => {
 
 app.post('/api/checkout', async (req, res) => {
   const { customer, address, notes, items } = req.body;
-
   if (!customer || !address || !items || !items.length) {
     res.status(400).json({ error: 'Missing checkout details.' });
     return;
@@ -254,8 +233,7 @@ app.post('/api/checkout', async (req, res) => {
     );
     persistDatabase();
 
-    const emailText = `New order received:\nOrder ID: ${order.id}\nCustomer: ${customer.fullName}\nPhone: ${customer.phone}\nEmail: ${customer.email}\nAddress: ${address}\nTotal: $${total.toFixed(2)}\nItems: ${items.map(item => `${item.name} x ${item.qty}`).join(', ')}`;
-
+    const emailText = `New order received:\nOrder ID: ${order.id}\nCustomer: ${customer.fullName}\nPhone: ${customer.phone}\nEmail: ${customer.email}\nAddress: ${address}\nTotal: $${total.toFixed(2)}`;
     try {
       await sendEmail(process.env.ADMIN_EMAIL || 'admin@myshop.com', `New order: ${order.id}`, emailText);
       await sendWhatsApp(`New order: ${order.id} | Customer: ${customer.fullName} | Total: $${total.toFixed(2)}`);
@@ -270,13 +248,7 @@ app.post('/api/checkout', async (req, res) => {
           currency: 'usd',
           metadata: { orderId: order.id }
         });
-
-        res.json({
-          success: true,
-          orderId,
-          paymentIntent: paymentIntent.client_secret,
-          message: 'Order created successfully. Payment is ready.'
-        });
+        res.json({ success: true, orderId, paymentIntent: paymentIntent.client_secret, message: 'Order created successfully.' });
         return;
       } catch (stripeError) {
         console.error('Stripe error:', stripeError);
@@ -292,12 +264,10 @@ app.post('/api/checkout', async (req, res) => {
 app.post('/api/orders/:id/status', (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-
   if (!status) {
     res.status(400).json({ error: 'Status is required.' });
     return;
   }
-
   try {
     db.run('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
     persistDatabase();
@@ -310,12 +280,10 @@ app.post('/api/orders/:id/status', (req, res) => {
 app.post('/api/orders/:id/payment-status', (req, res) => {
   const { id } = req.params;
   const { paymentStatus } = req.body;
-
   if (!paymentStatus) {
     res.status(400).json({ error: 'Payment status is required.' });
     return;
   }
-
   try {
     db.run('UPDATE orders SET payment_status = ? WHERE id = ?', [paymentStatus, id]);
     persistDatabase();
@@ -325,12 +293,12 @@ app.post('/api/orders/:id/payment-status', (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-app.get('/admin', (req, res) => {
-  res.sendFile(__dirname + '/admin.html');
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 if (require.main === module) {
