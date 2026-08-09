@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NovaCart | Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="admin-body">
+    <header class="topbar admin-topbar">
+      <div class="container nav">
+        <div class="brand-wrap">
+          <div class="brand-badge">N</div>
+          <div>
+            <div class="brand-name">NovaCart Admin</div>
+            <small>Order management</small>
+          </div>
+        </div>
+
+        <div class="admin-actions">
+          <a class="nav-btn" href="/">Storefront</a>
+          <button id="logoutBtn" type="button" class="ghost-btn hidden">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-main container">
+      <section id="loginSection" class="card login-card">
+        <h2>Admin login</h2>
+        <form id="loginForm" class="login-form">
+          <label>
+            Email
+            <input type="email" id="adminEmail" placeholder="admin@myshop.com" required />
+          </label>
+          <label>
+            Password
+            <input type="password" id="adminPassword" placeholder="••••••••" required />
+          </label>
+          <button type="submit" class="primary-btn wide">Login</button>
+          <p class="demo-login">Demo login: admin@myshop.com / admin123</p>
+          <p id="loginMessage" class="form-message" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="adminSection" class="hidden">
+        <div class="stats-grid">
+          <div class="card stat-card">
+            <span>Total sales</span>
+            <strong id="statRevenue">$0.00</strong>
+          </div>
+          <div class="card stat-card">
+            <span>Orders</span>
+            <strong id="statOrders">0</strong>
+          </div>
+          <div class="card stat-card">
+            <span>Products</span>
+            <strong id="statProducts">0</strong>
+          </div>
+          <div class="card stat-card">
+            <span>Pending</span>
+            <strong id="statPending">0</strong>
+          </div>
+        </div>
+
+        <div class="admin-panels">
+          <div class="card">
+            <div class="panel-head">
+              <h3>Orders</h3>
+            </div>
+            <div id="ordersTable" class="orders-table"></div>
+          </div>
+
+          <div class="card">
+            <div class="panel-head">
+              <h3>Products</h3>
+            </div>
+            <form id="productForm" class="product-form">
+              <label>
+                Product name
+                <input type="text" id="productName" required />
+              </label>
+              <label>
+                Price
+                <input type="number" id="productPrice" min="1" step="0.01" required />
+              </label>
+              <label>
+                Category
+                <input type="text" id="productCategory" required />
+              </label>
+              <label>
+                Description
+                <textarea id="productDescription" rows="2" required></textarea>
+              </label>
+              <button type="submit" class="primary-btn wide">Add product</button>
+            </form>
+            <div id="productList" class="product-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>
