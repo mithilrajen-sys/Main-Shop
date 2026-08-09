@@ -11,14 +11,29 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const dbPath = path.join(__dirname, 'database.sqlite');
+const dbPath = process.env.VERCEL ? path.join('/tmp', 'database.sqlite') : path.join(__dirname, 'database.sqlite');
 
 let db;
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
+async function ensureDatabase() {
+  if (!db) {
+    await initDatabase();
+  }
+}
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDatabase();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 function fetchAll(sql, params = []) {
   const results = db.exec(sql, params);
@@ -310,11 +325,15 @@ app.get('/admin', (req, res) => {
   res.sendFile(__dirname + '/admin.html');
 });
 
-initDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+if (require.main === module) {
+  initDatabase().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }).catch((error) => {
+    console.error('Failed to init database:', error);
+    process.exit(1);
   });
-}).catch((error) => {
-  console.error('Failed to init database:', error);
-  process.exit(1);
-});
+}
+
+module.exports = app;
