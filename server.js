@@ -15,9 +15,8 @@ let orders = [];
 
 app.use(express.json({ limit: '10mb' }));
 
-// Serve all static files correctly from root
+// Properly mount static file directories to prevent 404 errors on assets
 app.use(express.static(process.cwd()));
-app.use('/admin', express.static(process.cwd()));
 
 app.get('/api/products', (req, res) => {
   res.json(products);
