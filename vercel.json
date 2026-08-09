@@ -1,20 +1,8 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/admin",
-      "dest": "/server.js"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/server.js"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/server.js" },
+    { "source": "/admin", "destination": "/server.js" },
+    { "source": "/((?!api|admin|.*\\.).*)", "destination": "/server.js" }
   ]
 }
