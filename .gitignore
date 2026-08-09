@@ -7,3 +7,5 @@ coverage/
 *.log
 database.sqlite
 .DS_Store
+.vercel
+.env*

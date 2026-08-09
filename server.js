@@ -1,4 +1,5 @@
 const express = require('express');
+const app = express();
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +10,6 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 const dbPath = process.env.VERCEL ? path.join('/tmp', 'database.sqlite') : path.join(__dirname, 'database.sqlite');
 
