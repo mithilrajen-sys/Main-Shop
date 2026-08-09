@@ -160,6 +160,14 @@ function sendWhatsApp(message) {
   });
 }
 
+app.get('/styles.css', (req, res) => {
+  res.sendFile(path.join(__dirname, 'styles.css'));
+});
+
+app.get('/app.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'app.js'));
+});
+
 app.get('/api/products', (req, res) => {
   try {
     const rows = fetchAll('SELECT * FROM products ORDER BY created_at DESC');

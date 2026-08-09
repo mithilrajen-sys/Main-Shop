@@ -2,6 +2,9 @@
   "version": 2,
   "routes": [
     { "handle": "filesystem" },
+    { "src": "/styles.css", "dest": "/server.js" },
+    { "src": "/app.js", "dest": "/server.js" },
+    { "src": "/admin.html", "dest": "/server.js" },
     { "src": "/api/(.*)", "dest": "/server.js" },
     { "src": "/admin", "dest": "/server.js" },
     { "src": "/", "dest": "/server.js" },
