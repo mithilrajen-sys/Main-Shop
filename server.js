@@ -14,6 +14,8 @@ let products = [
 let orders = [];
 
 app.use(express.json({ limit: '10mb' }));
+
+// Explicitly point Express to the root workspace directory for all static files (CSS, JS, images)
 app.use(express.static(path.join(process.cwd())));
 
 app.get('/api/products', (req, res) => {
